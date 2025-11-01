@@ -2,41 +2,10 @@
   "miniprogramRoot": "./",
   "projectname": "music_game",
   "description": "Simple music rhythm game built with the WeChat mini game framework.",
-  "appid": "wx84f66bf5ab473f2e",
+  "appid": "touristappid",
   "compileType": "game",
   "libVersion": "2.29.4",
   "packageType": "full",
   "simulatorType": "wechat",
-  "simulatorVersion": "0.0.0",
-  "setting": {
-    "es6": false,
-    "postcss": false,
-    "compileWorklet": false,
-    "minified": false,
-    "uglifyFileName": false,
-    "uploadWithSourceMap": true,
-    "enhance": false,
-    "packNpmManually": false,
-    "packNpmRelationList": [],
-    "minifyWXSS": true,
-    "minifyWXML": true,
-    "localPlugins": false,
-    "disableUseStrict": false,
-    "useCompilerPlugins": false,
-    "condition": false,
-    "swc": false,
-    "disableSWC": true,
-    "babelSetting": {
-      "ignore": [],
-      "disablePlugins": [],
-      "outputPath": ""
-    }
-  },
-  "simulatorPluginLibVersion": {},
-  "packOptions": {
-    "ignore": [],
-    "include": []
-  },
-  "isGameTourist": false,
-  "editorSetting": {}
+  "simulatorVersion": "0.0.0"
 }

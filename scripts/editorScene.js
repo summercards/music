@@ -34,6 +34,9 @@ class EditorScene {
     this.spawns = [];
     // Output JSON string for save feedback
     this.outputText = '';
+    // Deletion mode flag. When true, tapping on a note will delete it and
+    // no new notes will be added while in this mode.
+    this.deleteMode = false;
     // Cache bounding boxes for UI interaction
     this.bounds = {};
     // Populate spawns and reset state based on the first level
@@ -126,10 +129,40 @@ class EditorScene {
   saveSpawns() {
     // Sort spawns and round times to 3 decimal places
     this.spawns.sort((a, b) => a.time - b.time);
-    this.outputText = JSON.stringify(this.spawns, null, 2);
-    if (wx.setClipboardData) {
-      wx.setClipboardData({ data: this.outputText });
+    // Compose JSON representation of spawns only
+    const spawnsJson = JSON.stringify(this.spawns, null, 2);
+    // Compose a full level definition object matching the format of levels files
+    const level = this.levels[this.currentLevelIndex];
+    const levelObj = {
+      title: level.title,
+      file: level.file,
+      duration: level.duration,
+      spawns: this.spawns.slice()
+    };
+    const fileContent = `/**\n * Auto-generated level file via editor.\n */\nmodule.exports = ${JSON.stringify(levelObj, null, 2)};\n`;
+    // Attempt to write the file to the levels directory. Use Node's fs if available.
+    let savedFileName = '';
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      // Build a safe filename from the title by replacing whitespace with underscores
+      let baseName = level.title.replace(/\s+/g, '_');
+      if (!baseName) baseName = 'custom_level';
+      // Append .js extension
+      const fileName = `${baseName}.js`;
+      // Resolve the path relative to this script's directory
+      const filePath = path.resolve(__dirname, '../levels', fileName);
+      fs.writeFileSync(filePath, fileContent);
+      savedFileName = fileName;
+    } catch (err) {
+      // If fs is unavailable (e.g. in certain runtimes), fall back to clipboard only
     }
+    // Copy JSON spawns to clipboard for convenience
+    if (wx.setClipboardData) {
+      wx.setClipboardData({ data: spawnsJson });
+    }
+    // Provide feedback in outputText: show spawns and file saved
+    this.outputText = savedFileName ? `已保存为 ${savedFileName}\n${spawnsJson}` : spawnsJson;
   }
 
   /**
@@ -207,6 +240,12 @@ class EditorScene {
         }
       }
     }
+
+    // Delete mode toggle button
+    if (this._hitBox(this.bounds.delete, x, y)) {
+      this.deleteMode = !this.deleteMode;
+      return;
+    }
     // Scroll buttons
     if (this._hitBox(this.bounds.scrollUp, x, y)) {
       this.scrollUp();
@@ -253,6 +292,10 @@ class EditorScene {
           this.spawns.splice(i, 1);
           return;
         }
+      }
+      // If in delete mode and no note found, do nothing
+      if (this.deleteMode) {
+        return;
       }
       // Otherwise add a new note with lane
       const roundedTime = parseFloat(time.toFixed(2));
@@ -409,6 +452,21 @@ class EditorScene {
     ctx.font = '14px sans-serif';
     ctx.fillStyle = '#8c9bd6';
     ctx.fillText('选择方块类型', width / 2, blockY - 10);
+
+    // Delete mode toggle button. Positioned below the block type row.
+    const delBtnW = 100;
+    const delBtnH = 32;
+    const delBtnX = (width - delBtnW) / 2;
+    const delBtnY = blockY + blockSize + 12;
+    this.bounds.delete = { x: delBtnX, y: delBtnY, w: delBtnW, h: delBtnH };
+    // Fill colour indicates active state
+    ctx.fillStyle = this.deleteMode ? '#d64e4e' : '#2e3c6a';
+    drawRoundedRect(ctx, delBtnX, delBtnY, delBtnW, delBtnH, 6);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(this.deleteMode ? '删除模式:开' : '删除模式:关', delBtnX + delBtnW / 2, delBtnY + delBtnH / 2 + 5);
+    ctx.textAlign = 'left';
     // Draw timeline background panel
     const trackX = this.viewportX;
     const trackY = this.viewportY;

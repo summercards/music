@@ -5,7 +5,7 @@
  */
 
 module.exports = {
-  title: '正弦 660Hz',
+  title: '快乐小蜜蜂',
   file: 'assets/audio/song2.wav',
   // Extended duration to 120 seconds for a full 2‑minute track.
   duration: 120,

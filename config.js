@@ -50,8 +50,27 @@ module.exports = {
   blockTypes: [
     // Updated colours to better fit the dark, playful aesthetic. Blocks are
     // vibrant against the deep blue background while remaining harmonious.
-    { color: '#ff6bcb', effect: null },      // pink plain block
-    { color: '#5b86e5', effect: 'rotate' },  // blue rotating block
-    { color: '#f8c967', effect: 'pulse' }    // yellow pulsing block
+    // Each block type now defines a fixed falling speed (pixels per second)
+    // and a score value awarded when caught. These values are used by the
+    // spawning logic and collision handling in GameScene rather than
+    // randomising speeds or using a global scoring rule.
+    {
+      color: '#ff6bcb',    // pink plain block
+      effect: null,
+      speed: 200,
+      score: 1
+    },
+    {
+      color: '#5b86e5',    // blue rotating block
+      effect: 'rotate',
+      speed: 240,
+      score: 2
+    },
+    {
+      color: '#f8c967',    // yellow pulsing block
+      effect: 'pulse',
+      speed: 280,
+      score: 3
+    }
   ]
 };

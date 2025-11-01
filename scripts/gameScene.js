@@ -1,6 +1,7 @@
 const Player = require('./player');
 const Block = require('./block');
 const { randomRange, rectIntersect, drawRoundedRect } = require('./util');
+const { ExpandingSquareEffect } = require('./effects');
 const config = require('../config');
 
 // Block types are defined in config.js (config.blockTypes). They
@@ -48,6 +49,8 @@ class GameScene {
     this.gameOver = false;
     // Score feedback effects for visualising hits and misses
     this.scoreEffects = [];
+    // Visual effects such as collision flashes
+    this.effects = [];
     // Create and configure audio
     this.audioCtx = wx.createInnerAudioContext();
     this.audioCtx.autoplay = false;
@@ -147,9 +150,12 @@ class GameScene {
           this.player.height
         )
       ) {
-        // Collision: remove block and award points
-        this.score += config.scoring.hit;
-        this.addScoreEffect(block.x, block.y, `+${config.scoring.hit}`);
+        // Collision: remove block and award points based on block type
+        const pts = block.type && typeof block.type.score === 'number' ? block.type.score : config.scoring.hit;
+        this.score += pts;
+        this.addScoreEffect(block.x, block.y, `+${pts}`);
+        // Trigger a collision visual effect using the block's colour
+        this.effects.push(new ExpandingSquareEffect(block.x, block.y, block.type.color));
         toRemove.push(i);
         continue;
       }
@@ -175,6 +181,15 @@ class GameScene {
     }
     // Update score feedback effects
     this.updateScoreEffects(dt);
+
+    // Update visual effects
+    for (let i = this.effects.length - 1; i >= 0; i--) {
+      const eff = this.effects[i];
+      eff.update(dt);
+      if (eff.life <= 0) {
+        this.effects.splice(i, 1);
+      }
+    }
   }
 
   /**
@@ -225,7 +240,8 @@ class GameScene {
       x = randomRange(size / 2, this.canvas.width - size / 2);
     }
     const y = -size;
-    const speed = randomRange(200, 320);
+    // Use the fixed speed defined on the block type instead of random speed
+    const speed = typeDef.speed || 200;
     const block = new Block({ x, y, size, speed, type: typeDef });
     this.blocks.push(block);
   }
@@ -332,6 +348,10 @@ class GameScene {
     this.player.render(ctx);
     for (const block of this.blocks) {
       block.render(ctx);
+    }
+    // Draw visual effects (e.g., collision flashes) after blocks but before score feedback
+    for (const eff of this.effects) {
+      eff.render(ctx);
     }
     // Draw score feedback effects on top of blocks and player
     for (const eff of this.scoreEffects) {

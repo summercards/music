@@ -7,7 +7,7 @@
  */
 
 module.exports = {
-  title: '正弦 440Hz',
+  title: '魔法师的情书',
   // Relative path to the audio file within the package
   file: 'assets/audio/song1.wav',
   // Duration of the track in seconds. Used for progress bar and end
