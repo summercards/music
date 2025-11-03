@@ -1,31 +1,26 @@
 /**
- * Level definition for the first song. This module exports
- * metadata about the song and an optional list of spawn events. When
- * spawns are provided the game will spawn falling blocks at the
- * specified times and with the given block type index. If no
- * spawns are provided the game will fall back to random spawning.
+ * 第一首歌曲的关卡定义。此模块导出歌曲的元数据以及可选的方块生成序列。
+ * 如果提供了 spawns 数组，游戏将按照数组中指定的时间、方块类型和轨道生成下落方块；
+ * 如果未提供 spawns，则游戏会退回到默认的随机生成模式。
  */
 
 module.exports = {
   title: '魔法师的情书',
-  // Relative path to the audio file within the package
+  // 音频文件在包内的相对路径
   file: 'assets/audio/song1.wav',
-  // Duration of the track in seconds. Used for progress bar and end
-  // condition. Ideally this matches the actual length of the file.
-  // Extended duration to 120 seconds for a full 2‑minute track.
+  // 曲目时长（秒），用于进度条和结束条件。应与音频文件实际时长一致。
+  // 为了完整的两分钟体验，延长到 120 秒。
   duration: 120,
-  // Pattern of blocks to spawn. Each entry specifies a `time` (in
-  // seconds from the start of the song), a `type` index (0..2) and a
-  // `lane` index (0..numLanes-1). This pattern is procedurally
-  // generated to span the entire duration in a repeating sequence.
+  // 方块生成序列。每个条目包含 `time`（从歌曲开始起的秒数）、`type` 索引（0..2）
+  // 和 `lane` 索引（0..numLanes-1）。此模式按顺序生成，覆盖整个时长。
   spawns: (() => {
     const config = require('../config');
     const spawns = [];
-    const interval = 0.8; // seconds between spawns
+    const interval = 0.8; // 每次生成之间的时间间隔（秒）
     const total = 120;
     const laneCount = config.numLanes;
     const typeCount = config.blockTypes.length;
-    // Generate spawns starting at t=0.0
+    // 从时间 0.0 开始生成节奏模式
     for (let i = 0; ; i++) {
       const t = parseFloat((i * interval).toFixed(2));
       if (t > total) break;

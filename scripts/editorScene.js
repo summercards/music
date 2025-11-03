@@ -6,12 +6,10 @@ const config = require('../config');
 const { drawRoundedRect } = require('./util');
 
 /**
- * EditorScene implements a timeline‑based level editor. A vertical track
- * represents the entire song duration; users can tap on the track to
- * place notes at specific times and scroll through the timeline using
- * up/down buttons on the right. The left side shows a time scale,
- * while controls for song selection, block type selection, saving and
- * testing sit at the top and bottom of the screen.
+ * EditorScene 实现了一个基于时间轴的关卡编辑器。
+ * 整个歌曲的时长在垂直方向表示；用户可以在轨道上点击以在特定时间放置音符，
+ * 并使用右侧的上下按钮或滚动条在时间轴上滚动。左侧显示时间刻度，
+ * 顶部和底部提供歌曲选择、方块类型选择、保存和测试等操作。
  */
 class EditorScene {
   constructor({ canvas, ctx, changeScene }) {
@@ -52,9 +50,23 @@ class EditorScene {
    */
   updateLevelData() {
     const level = this.levels[this.currentLevelIndex];
-    this.spawns = Array.isArray(level.spawns) ? level.spawns.slice() : [];
-    // Ensure spawns are sorted by time
+    // 默认从关卡定义读取 spawns
+    let spawns = Array.isArray(level.spawns) ? level.spawns.slice() : [];
+    // 尝试从本地存储读取编辑器保存的谱面，以标题作为键
+    try {
+      if (wx.getStorageSync) {
+        const saved = wx.getStorageSync('spawns_' + level.title);
+        if (Array.isArray(saved)) {
+          spawns = saved.slice();
+        }
+      }
+    } catch (e) {
+      // 忽略本地存储错误
+    }
+    this.spawns = spawns;
+    // 按时间排序
     this.spawns.sort((a, b) => a.time - b.time);
+    // 重置滚动偏移和输出文本
     this.scrollOffset = 0;
     this.outputText = '';
   }
@@ -68,12 +80,16 @@ class EditorScene {
   computeLayout() {
     const width = this.canvas.width;
     const height = this.canvas.height;
-    // Margins and panel dimensions
-    this.headerHeight = 140; // space for title, song selection and block types
-    this.footerHeight = 80;  // space for save/test/back buttons
+    // 边距和面板尺寸
+    // 头部高度用于放置标题、歌曲选择、方块类型选择等，增大此数值可避免和时间轴区域重叠
+    this.headerHeight = 200;
+    // 底部高度用于保存/测试/返回按钮
+    this.footerHeight = 80;
     this.marginX = 20;
-    this.scaleWidth = 60;    // width reserved for time scale
-    this.scrollBarWidth = 24; // width for scroll buttons
+    // 时间刻度区域宽度
+    this.scaleWidth = 60;
+    // 滚动条按钮区域宽度
+    this.scrollBarWidth = 24;
     // Timeline viewport coordinates and dimensions
     this.viewportX = this.marginX + this.scaleWidth;
     this.viewportY = this.headerHeight;
@@ -127,12 +143,11 @@ class EditorScene {
    * the clipboard if possible and stores it in outputText for display.
    */
   saveSpawns() {
-    // Sort spawns and round times to 3 decimal places
+    // 按时间排序并保留 spawns 的克隆
     this.spawns.sort((a, b) => a.time - b.time);
-    // Compose JSON representation of spawns only
     const spawnsJson = JSON.stringify(this.spawns, null, 2);
-    // Compose a full level definition object matching the format of levels files
     const level = this.levels[this.currentLevelIndex];
+    // 生成关卡定义对象，格式与 levels 文件一致
     const levelObj = {
       title: level.title,
       file: level.file,
@@ -140,28 +155,35 @@ class EditorScene {
       spawns: this.spawns.slice()
     };
     const fileContent = `/**\n * Auto-generated level file via editor.\n */\nmodule.exports = ${JSON.stringify(levelObj, null, 2)};\n`;
-    // Attempt to write the file to the levels directory. Use Node's fs if available.
     let savedFileName = '';
     try {
+      // 若运行环境支持 Node fs，则尝试写入文件
       const fs = require('fs');
       const path = require('path');
-      // Build a safe filename from the title by replacing whitespace with underscores
       let baseName = level.title.replace(/\s+/g, '_');
       if (!baseName) baseName = 'custom_level';
-      // Append .js extension
       const fileName = `${baseName}.js`;
-      // Resolve the path relative to this script's directory
       const filePath = path.resolve(__dirname, '../levels', fileName);
       fs.writeFileSync(filePath, fileContent);
       savedFileName = fileName;
     } catch (err) {
-      // If fs is unavailable (e.g. in certain runtimes), fall back to clipboard only
+      // 无文件系统权限时忽略
     }
-    // Copy JSON spawns to clipboard for convenience
+    // 保存到本地存储，以便下次加载该歌曲时自动应用
+    try {
+      if (wx.setStorageSync) {
+        wx.setStorageSync('spawns_' + level.title, this.spawns.slice());
+      }
+    } catch (e) {
+      // 忽略本地存储错误
+    }
+    // 更新当前 level 对象的 spawns，确保游戏内立即生效
+    level.spawns = this.spawns.slice();
+    // 尝试复制 JSON 到剪贴板
     if (wx.setClipboardData) {
       wx.setClipboardData({ data: spawnsJson });
     }
-    // Provide feedback in outputText: show spawns and file saved
+    // 输出保存结果反馈
     this.outputText = savedFileName ? `已保存为 ${savedFileName}\n${spawnsJson}` : spawnsJson;
   }
 

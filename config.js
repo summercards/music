@@ -1,27 +1,21 @@
 /**
- * Global configuration for the music game. This module centralises
- * parameters that affect gameplay, appearance and scoring so that
- * changes to these values can be made in a single place. Levels
- * reference these values for consistent behaviour across songs.
+ * 全局配置文件，用于集中管理音乐游戏的参数。
+ * 包含与玩法、外观和评分相关的设置，这些设置集中在这里，
+ * 方便统一调整。各个关卡在读取这些配置时表现一致。
  */
 
 module.exports = {
   /**
-   * Number of horizontal lanes in the game. Blocks will fall along
-   * these lanes, and the editor timeline will be divided into this
-   * many columns. The number of block types (colours) can be less
-   * than the lane count; lanes cycle through available types when
-   * generating patterns. Set this to 6 to create six distinct lanes
-   * across the screen.
+   * 游戏中的横向轨道数量。方块会沿着这些轨道下落，编辑器时间轴也会被划分为同样多的列。
+   * 方块类型（颜色）的数量可以少于轨道数量，当自动生成节奏时轨道会循环使用已有的颜色。
+   * 设置为 6 可以在屏幕上创建六条独立的轨道。
    */
   numLanes: 6,
   /**
-   * Player settings control the size and pulsing animation of the
-   * player's square. `size` specifies the width and height (in
-   * pixels) of the square. `pulseAmplitude` determines how much the
-   * square scales around its base size (e.g. 0.2 = ±20%), and
-   * `pulseFrequency` controls how many full scale cycles happen per
-   * second.
+   * 玩家方块的设置：包含方块的尺寸以及呼吸动画的幅度和频率。
+   * `size` 为方块的宽高（像素）；
+   * `pulseAmplitude` 控制缩放的幅度（例如 0.2 表示大小会在基础尺寸正负 20% 之间变化）；
+   * `pulseFrequency` 表示每秒完成多少次缩放周期。
    */
   player: {
     size: 60,
@@ -30,10 +24,9 @@ module.exports = {
   },
 
   /**
-   * Scoring rules used across all levels. The `hit` value is the
-   * number of points awarded when the player catches a falling block.
-   * The `miss` value is the penalty applied when a block reaches
-   * the bottom of the screen without being caught.
+   * 评分规则：用于所有关卡。
+   * `hit` 表示玩家接到方块时获得的分值；
+   * `miss` 表示方块掉落到屏幕底部未接住时扣减的分值。
    */
   scoring: {
     hit: 1,
@@ -41,35 +34,31 @@ module.exports = {
   },
 
   /**
-   * Definitions of block types available in the game. Each entry
-   * defines a colour and an optional effect identifier. New types
-   * can be added here and will automatically become available for
-   * both gameplay and the editor. Effects are interpreted by the
-   * Block class.
+   * 可用方块类型的定义。每个对象定义了颜色和可选的特效标识，
+   * 同时现在增加了固定的掉落速度（speed）和得分（score）。
+   * 如需新增方块类型，可以在此数组追加，游戏和编辑器都会自动读取。
+   * 特效由 Block 类进行解析。
    */
   blockTypes: [
-    // Updated colours to better fit the dark, playful aesthetic. Blocks are
-    // vibrant against the deep blue background while remaining harmonious.
-    // Each block type now defines a fixed falling speed (pixels per second)
-    // and a score value awarded when caught. These values are used by the
-    // spawning logic and collision handling in GameScene rather than
-    // randomising speeds or using a global scoring rule.
+    // 更新颜色以适配深色、趣味的美术风格。方块在深蓝色背景上更加鲜艳且协调。
+    // 每个方块类型现在定义了固定的下落速度（像素/秒）和被接住时奖励的分数。
+    // 这些值在 GameScene 的生成逻辑和碰撞处理时使用，而不是随机速度或全局计分。
     {
-      color: '#ff6bcb',    // pink plain block
+      color: '#ff6bcb',    // 粉色普通方块
       effect: null,
       speed: 200,
       score: 1
     },
     {
-      color: '#5b86e5',    // blue rotating block
+      color: '#5b86e5',    // 蓝色旋转方块
       effect: 'rotate',
-      speed: 240,
+      speed: 200,
       score: 2
     },
     {
-      color: '#f8c967',    // yellow pulsing block
+      color: '#f8c967',    // 黄色脉冲方块
       effect: 'pulse',
-      speed: 280,
+      speed: 200,
       score: 3
     }
   ]

@@ -1,35 +1,28 @@
 const MenuScene = require('./scripts/menuScene');
 
 /**
- * Entry point for the WeChat mini game. This file creates the canvas,
- * instantiates the menu scene, hooks up touch events and kicks off
- * the main render loop. Scene instances are swapped out via the
- * changeScene function passed to each scene.
+ * 微信小游戏的入口。该文件创建画布、实例化菜单场景，注册触摸事件并启动
+ * 主渲染循环。场景实例通过 changeScene 函数进行切换。
  */
 
-// Create the game canvas. On the minigame platform the canvas API
-// closely resembles the HTML5 Canvas API. wx.createCanvas returns a
-// canvas element sized at 300×150 by default; we resize it to match
-// the screen.
+// 创建游戏画布。在微信小游戏平台上，canvas API 与 HTML5 Canvas 类似。
+// wx.createCanvas 默认返回 300×150 大小的画布，这里调整为屏幕大小。
 const canvas = wx.createCanvas();
 const ctx = canvas.getContext('2d');
 
-// Resize the canvas to fill the device screen. System info provides
-// the window dimensions excluding status bar and navigation bar.
+// 将画布大小调整到设备屏幕尺寸。系统信息提供了不包含状态栏和导航条的窗口尺寸。
 const { windowWidth, windowHeight } = wx.getSystemInfoSync();
 canvas.width = windowWidth;
 canvas.height = windowHeight;
 
-// Global variable to hold the currently active scene. Scenes are
-// objects with update, render and optional touch handler methods.
+// 全局变量保存当前活动场景。场景对象包含 update、render 方法以及可选的触摸事件处理方法。
 let currentScene;
 
 /**
- * Replaces the current scene with a new one. Scenes accept the
- * canvas, context and the changeScene callback. This function is
- * passed into scenes so they can trigger scene transitions.
+ * 替换当前场景为新的场景。场景会接收画布、绘图上下文以及 changeScene 回调。
+ * 通过传入 changeScene，场景内部可以触发场景切换。
  *
- * @param {Object} scene - The next scene to run.
+ * @param {Object} scene - 下一个要运行的场景对象。
  */
 function changeScene(scene) {
   currentScene = scene;
@@ -38,9 +31,8 @@ function changeScene(scene) {
 // Instantiate the initial menu scene.
 changeScene(new MenuScene({ canvas, ctx, changeScene }));
 
-// Setup touch events and delegate to the active scene if the scene
-// defines the corresponding handler. onTouchMove is useful for
-// tracking finger drags, while onTouchStart handles taps.
+// 注册触摸事件，如果当前场景定义了相应的处理器就委托给它。
+// onTouchMove 用于跟踪手指拖动，onTouchStart 用于处理点击。
 wx.onTouchStart((e) => {
   if (currentScene && currentScene.onTouchStart) {
     currentScene.onTouchStart(e);
@@ -59,11 +51,9 @@ wx.onTouchEnd((e) => {
   }
 });
 
-// Main game loop. We avoid using wx.requestAnimationFrame directly
-// because it is not available in all WeChat runtimes (e.g. open data
-// subcontexts). Instead we rely on the global requestAnimationFrame if
-// present, and fall back to setTimeout as a polyfill. This ensures
-// smooth rendering across different environments.
+// 主游戏循环。不直接使用 wx.requestAnimationFrame，因为某些环境（如开放数据域）不支持。
+// 优先使用全局的 requestAnimationFrame，若不存在则用 setTimeout 模拟。
+// 这样可在不同运行环境下保持渲染流畅。
 const rAF = (cb) => {
   if (typeof requestAnimationFrame === 'function') {
     return requestAnimationFrame(cb);
@@ -86,5 +76,5 @@ function loop(ts) {
   }
   rAF(loop);
 }
-// Kick off the loop using rAF rather than wx.requestAnimationFrame
+// 使用 rAF 而不是 wx.requestAnimationFrame 启动循环
 rAF(loop);

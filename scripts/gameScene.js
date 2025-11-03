@@ -4,15 +4,12 @@ const { randomRange, rectIntersect, drawRoundedRect } = require('./util');
 const { ExpandingSquareEffect } = require('./effects');
 const config = require('../config');
 
-// Block types are defined in config.js (config.blockTypes). They
-// determine the colour and effect of each falling block. See
-// config/blockTypes for details.
+// 方块类型定义在 config.js（config.blockTypes）。
+// 它们决定每个下落方块的颜色和特效。详情见 config.blockTypes。
 
 /**
- * GameScene manages the core gameplay loop for a selected song. It
- * spawns falling blocks, tracks score, drives the player character
- * and audio playback, and handles the transition back to the menu
- * upon completion.
+ * GameScene 管理所选歌曲的核心游戏循环。
+ * 它生成下落方块、统计得分、驱动玩家方块和音频播放，并在歌曲结束时返回菜单。
  */
 class GameScene {
   /**
