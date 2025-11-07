@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>乐谱编辑器（离线版）</title>
+  <style>
+    :root {
+      --bg: #0b142b;
+      --panel: #1b2a4a;
+      --panel2: #111f3c;
+      --track: #17284b;
+      --text: #cfe0ff;
+      --accent: #3a63a5;
+      --pink: #ff6bcb;
+      --blue: #5b86e5;
+      --yellow: #f8c967;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+    .wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+    }
+    .phone {
+      position: relative;
+      width: 420px;
+      max-width: 70vw;
+      height: 90vh;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: var(--bg);
+      touch-action: none;
+    }
+    .topbar, .bottombar {
+      position: absolute;
+      left: 0;
+      right: 0;
+      display: flex;
+      gap: 8px;
+      padding: 10px 12px;
+    }
+    .topbar {
+      top: 0;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .bottombar {
+      bottom: 0;
+      justify-content: center;
+      align-items: center;
+    }
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .btn.pink { background: #ff5fa3; }
+    .btn.blue { background: #4f82ff; }
+    .btn.gray { background: #6c7ba5; }
+    .chip {
+      width: 46px;
+      height: 36px;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      cursor: pointer;
+    }
+    .chip.active {
+      border-color: #fff;
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
+    }
+    .hr {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.08);
+      margin: 6px 0;
+    }
+    input[type="range"][orient="vertical"] {
+      writing-mode: bt-lr;
+      -webkit-appearance: slider-vertical;
+      height: 100%;
+    }
+    .rightbar {
+      position: absolute;
+      top: 140px;
+      right: 10px;
+      height: calc(100% - 140px - 86px);
+      display: flex;
+      align-items: center;
+    }
+    .hint {
+      position: absolute;
+      left: 12px;
+      bottom: 92px;
+      font-size: 12px;
+      opacity: 0.8;
+    }
+  
+    /* 布局：手机 + 右侧打点面板 */
+    .layout {
+      display: flex;
+      gap: 16px;
+      width: 100%;
+      max-width: 1100px;
+      align-items: stretch;
+      justify-content: center;
+    }
+
+    /* 保持手机外观 */
+    .phone {
+      position: relative;
+      width: 420px;
+      max-width: 70vw;
+      height: 90vh;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    }
+
+    /* 右侧打点面板 */
+    .marker-panel {
+      width: 260px;
+      max-width: 36vw;
+      background: var(--panel);
+      border-radius: 16px;
+      padding: 10px 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      font-size: 13px;
+      height: 90vh;
+      max-height: 90vh;
+    }
+
+    .marker-panel h3 {
+      margin: 0 0 4px;
+      font-size: 14px;
+    }
+
+    .marker-panel small {
+      opacity: 0.75;
+    }
+
+    .marker-list {
+      margin-top: 8px;
+      padding-right: 4px;
+      overflow-y: auto;
+      flex: 1 1 0;
+      min-height: 0;
+      font-size: 12px;
+    }
+
+    .marker-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      gap: 6px;
+    }
+
+    .marker-row span {
+      min-width: 20px;
+    }
+
+    .marker-time-btn {
+      flex: 1 1 auto;
+      background: var(--panel2);
+      color: #fff;
+      border-radius: 8px;
+      border: none;
+      padding: 2px 6px;
+      cursor: pointer;
+      font-size: 12px;
+      text-align: left;
+    }
+
+    .marker-del-btn {
+      border: none;
+      border-radius: 8px;
+      padding: 2px 6px;
+      font-size: 11px;
+      background: #ff5f73;
+      color: #fff;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .marker-hint {
+      margin-top: 6px;
+      font-size: 11px;
+      opacity: 0.75;
+      line-height: 1.4;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        flex-direction: column;
+        align-items: center;
+      }
+      .marker-panel {
+        width: 100%;
+        max-width: 420px;
+        height: auto;
+        max-height: none;
+      }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="layout">
+      <div class="phone">
+            <canvas id="cvs"></canvas>
+            <div class="topbar">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <strong id="title">未命名曲目</strong>
+                <div class="hr" style="width: 8px;"></div>
+                <div id="chips" style="display: flex; gap: 8px;">
+                  <button class="chip" id="chip0" title="类型 0" style="background: var(--pink)"></button>
+                  <button class="chip" id="chip1" title="类型 1" style="background: var(--blue)"></button>
+                  <button class="chip" id="chip2" title="类型 2" style="background: var(--yellow)"></button>
+                </div>
+                <button id="delBtn" class="btn gray" style="margin-left: 8px;">删除模式关</button>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <!-- 导入 JS 文件按钮 -->
+                <label class="btn gray">
+                  导入 JS
+                  <input type="file" id="file" accept=".js" style="display: none" />
+                </label>
+                <!-- 导入音频文件按钮，支持 wav/mp3 -->
+                <label class="btn gray">
+                  导入音频
+                  <input type="file" id="audioFile" accept=".mp3,.wav,audio/*" style="display: none" />
+                </label>
+                <!-- 导入时间参考底图（整首歌占比图） -->
+                <label class="btn gray">
+                  导入底图
+                  <input type="file" id="bgFile" accept="image/*" style="display: none" />
+                </label>
+                <!-- 缩放控件：放在一个独立的小组，避免挤压 "+" 号 -->
+                <div style="display: flex; align-items: center; gap: 4px;">
+                  <button id="zoomOut" class="btn gray" style="width:32px; text-align:center;">-</button>
+                  <span id="zoomVal" style="min-width: 60px; text-align:center;">70 px/s</span>
+                  <button id="zoomIn" class="btn gray" style="width:32px; text-align:center;">+</button>
+                </div>
+              </div>
+            </div>
+            <div class="bottombar">
+              <button id="saveBtn" class="btn pink">保存（导出JS）</button>
+              <!-- 播放按钮：开始/停止回放 -->
+              <button id="playBtn" class="btn blue">测试</button>
+              <!-- 重置按钮：停止播放并回到 0 秒 -->
+              <button id="resetBtn" class="btn gray">重置</button>
+              <!-- 清空按钮：移除所有音符 -->
+              <button id="clearBtn" class="btn gray">清空</button>
+            </div>
+            <div class="rightbar">
+              <input type="range" id="scroll" orient="vertical" min="0" max="1000" value="0" />
+            </div>
+            <div id="hint" class="hint">文件：未加载</div>
+          </div>
+
+      <div class="marker-panel">
+        <h3>打点工具</h3>
+        <small>在「测试」播放时，按空格键或点击下方按钮进行打点。</small>
+        <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
+          <button id="markBtn" class="btn pink" style="width:100%;">在当前时间打点</button>
+          <button id="clearMarksBtn" class="btn gray" style="width:100%;">清空全部打点</button>
+        </div>
+        <div class="hr" style="margin-top:8px;"></div>
+        <div class="marker-list" id="markerList"></div>
+        <div class="marker-hint">
+          · 空格：未播放时开始测试，播放时打点<br/>
+          · M：在当前时间打点<br/>
+          · R：重置到 0 秒；1/2/3：切换音符类型<br/>
+          · Z / X：缩小 / 放大时间轴；↑ / ↓：向前 / 向后滚动时间轴<br/>
+          · 点击右侧任意一行可以跳到对应时间预览（删按钮除外）<br/>
+          · 打点数据目前只在编辑器里使用，不写入导出的 JS
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 常量设置
+    const TYPE_COLORS = [
+      getComputedStyle(document.documentElement).getPropertyValue("--pink") || "#ff6bcb",
+      getComputedStyle(document.documentElement).getPropertyValue("--blue") || "#5b86e5",
+      getComputedStyle(document.documentElement).getPropertyValue("--yellow") || "#f8c967",
+    ];
+    const LANES = 6;
+    const HEADER_H = 140;
+    const FOOTER_H = 86;
+    const LEFT_W = 46;
+    // RIGHT_W 包含滚动条的预留空间，增大以避免遮挡第六轨
+    // 调整右侧预留空间，避免滚动条遮挡第六轨道。适当加宽至 80 像素，以确保第六轨道完全可见。
+    const RIGHT_W = 80;
+    const LANE_GAP = 6;
+    const NOTE_SIZE = 18;
+    const INITIAL_PPS = 70;
+
+    function clamp(v, a, b) {
+      return Math.max(a, Math.min(b, v));
+    }
+    function fmtSec(s) {
+      return s.toFixed(s % 1 === 0 ? 0 : 1) + "s";
+    }
+    // 解析 module.exports 格式的谱面
+    function parseSongCode(code) {
+      const m = code.match(/module\.exports\s*=\s*({[\s\S]*?})\s*;?\s*$/);
+      if (!m) throw new Error("未找到 module.exports");
+      const objLit = m[1];
+      const fn = new Function("return (" + objLit + ")");
+      const obj = fn();
+      if (!obj || !Array.isArray(obj.spawns)) throw new Error("对象缺少 spawns 数组");
+      return {
+        title: obj.title || "未命名",
+        file: obj.file || "",
+        duration: Number(obj.duration) || 120,
+        spawns: obj.spawns
+          .map((n) => ({
+            time: Number(n.time) || 0,
+            lane: Number(n.lane) || 0,
+            type: Number(n.type) || 0,
+          }))
+          .sort((a, b) => a.time - b.time),
+      };
+    }
+    // 将谱面对象转换为 JS 文件字符串
+    function stringifySongToJs(song) {
+      const { title, file, duration, spawns } = song;
+      const lines = [];
+      lines.push("/** 自动生成：Web 编辑器导出 */");
+      lines.push("module.exports = {");
+      lines.push("  title: " + JSON.stringify(title) + ",");
+      lines.push("  file: " + JSON.stringify(file) + ",");
+      lines.push("  duration: " + Number(duration) + ",");
+      lines.push("  spawns: [");
+      for (const n of spawns) {
+        lines.push(
+          "    { time: " + Number(n.time).toFixed(3) + ", lane: " + n.lane + ", type: " + n.type + " },"
+        );
+      }
+      lines.push("  ],");
+      lines.push("};\n");
+      return lines.join("\n");
+    }
+    // 下载文本为文件
+    function downloadText(name, text) {
+      const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 800);
+    }
+
+    // 主逻辑
+    (function main() {
+      const cvs = document.getElementById("cvs");
+      const ctx = cvs.getContext("2d");
+      const titleEl = document.getElementById("title");
+      const delBtn = document.getElementById("delBtn");
+      const fileInput = document.getElementById("file");
+      const zoomInBtn = document.getElementById("zoomIn");
+      const zoomOutBtn = document.getElementById("zoomOut");
+      const zoomVal = document.getElementById("zoomVal");
+      const saveBtn = document.getElementById("saveBtn");
+      const playBtn = document.getElementById("playBtn");
+      const clearBtn = document.getElementById("clearBtn");
+      const scrollBar = document.getElementById("scroll");
+      const hint = document.getElementById("hint");
+      const chips = [document.getElementById("chip0"), document.getElementById("chip1"), document.getElementById("chip2")];
+      const bgFileInput = document.getElementById("bgFile");
+      const markBtn = document.getElementById("markBtn");
+      const clearMarksBtn = document.getElementById("clearMarksBtn");
+      const markerListEl = document.getElementById("markerList");
+
+      // 游戏状态
+      const state = {
+        fileName: "song.js",
+        title: "未命名曲目",
+        file: "",
+        duration: 120,
+        spawns: [],
+        activeType: 0,
+        deleteMode: false,
+        pps: INITIAL_PPS,
+        scroll: 0,
+        isPlaying: false,
+        playHead: 0,
+        audio: null,
+        bgImage: null,
+        markers: [],
+      };;
+      let dragIndex = null;
+      let raf = 0;
+      let lastTS = 0;
+
+      // 计算布局参数
+      function layout() {
+        const rect = cvs.parentElement.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+        cvs.width = width;
+        cvs.height = height;
+        const trackX = 6 + LEFT_W;
+        const trackW = width - LEFT_W - RIGHT_W - 16;
+        const laneW = Math.floor((trackW - LANE_GAP * (LANES - 1)) / LANES);
+        const trackH = height - HEADER_H - FOOTER_H - 20;
+        const trackY = 6 + HEADER_H;
+        return { width, height, trackX, trackY, trackW, trackH, laneW };
+      }
+      let L = layout();
+      function viewSeconds() {
+        return Math.max(2, L.trackH / state.pps);
+      }
+      function maxScroll() {
+        return Math.max(0, state.duration - viewSeconds());
+      }
+
+      // ===== 打点相关函数 =====
+      function updateMarkerList() {
+        if (!markerListEl) return;
+        markerListEl.innerHTML = "";
+        state.markers.forEach((m, idx) => {
+          const row = document.createElement("div");
+          row.className = "marker-row";
+
+          const idxSpan = document.createElement("span");
+          idxSpan.textContent = String(idx + 1);
+
+          const timeBtn = document.createElement("button");
+          timeBtn.className = "marker-time-btn";
+          timeBtn.textContent = fmtSec(m.time);
+
+          const delBtn = document.createElement("button");
+          delBtn.className = "marker-del-btn";
+          delBtn.textContent = "删";
+
+          // 整行点击：定位到该打点时间
+          row.addEventListener("click", (ev) => {
+            // 如果点的是删除按钮，交给删除逻辑处理
+            if (ev.target === delBtn) return;
+            const t = clamp(m.time, 0, state.duration);
+            state.playHead = t;
+            state.scroll = clamp(t - viewSeconds() + 0.5, 0, maxScroll());
+            if (state.audio) {
+              try {
+                state.audio.currentTime = t;
+              } catch (e) {}
+            }
+            draw();
+          });
+
+          // 删除按钮：单独处理，并阻止冒泡，避免触发整行点击
+          delBtn.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            state.markers.splice(idx, 1);
+            updateMarkerList();
+            draw();
+          });
+
+          row.appendChild(idxSpan);
+          row.appendChild(timeBtn);
+          row.appendChild(delBtn);
+          markerListEl.appendChild(row);
+        });
+      }
+
+      function addMarker(time) {
+        const t = clamp(Number(time) || 0, 0, state.duration);
+        state.markers.push({ time: t });
+        state.markers.sort((a, b) => a.time - b.time);
+        updateMarkerList();
+        draw();
+      }
+
+function refreshChips() {
+        chips.forEach((el, idx) => {
+          if (idx === state.activeType) el.classList.add("active");
+          else el.classList.remove("active");
+        });
+      }
+            function draw() {
+        L = layout();
+        // 清屏
+        ctx.clearRect(0, 0, cvs.width, cvs.height);
+        // 背景
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--bg");
+        ctx.fillRect(0, 0, cvs.width, cvs.height);
+        // 头部
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--panel");
+        ctx.fillRect(6, 6, L.width - 12, HEADER_H - 12);
+
+        // 轨道背景面板
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--panel2");
+        ctx.fillRect(L.trackX, L.trackY, L.trackW, L.trackH);
+
+        // 如果有时间参考底图：按整首歌比例映射
+        if (state.bgImage && state.duration > 0) {
+          const img = state.bgImage;
+          const totalDuration = state.duration;
+          const vs = viewSeconds();
+          const visibleStart = clamp(state.scroll, 0, totalDuration);
+          const visibleEnd = clamp(state.scroll + vs, 0, totalDuration);
+          const tStartRatio = visibleStart / totalDuration;
+          const tEndRatio = visibleEnd / totalDuration;
+          const sy = tStartRatio * img.height;
+          const sh = Math.max(1, (tEndRatio - tStartRatio) * img.height);
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(L.trackX, L.trackY, L.trackW, L.trackH);
+          ctx.clip();
+          ctx.globalAlpha = 0.9;
+          ctx.drawImage(
+            img,
+            0, sy, img.width, sh,
+            L.trackX, L.trackY, L.trackW, L.trackH
+          );
+          ctx.restore();
+        }
+
+        // 各条轨：有底图时用半透明色，让底图透出来
+        for (let i = 0; i < LANES; i++) {
+          const x = L.trackX + i * (L.laneW + LANE_GAP);
+          const trackColor = getComputedStyle(document.documentElement).getPropertyValue("--track");
+          ctx.fillStyle = state.bgImage ? "rgba(23, 40, 75, 0.45)" : trackColor;
+          ctx.fillRect(x, L.trackY, L.laneW, L.trackH);
+        }
+
+        // 刻度线：从底部开始向上绘制
+        const vs = viewSeconds();
+        const first = Math.floor(state.scroll);
+        const last = Math.ceil(state.scroll + vs);
+        for (let s = first; s <= last; s++) {
+          const y = L.trackY + L.trackH - (s - state.scroll) * state.pps;
+          ctx.strokeStyle = s % 5 === 0 ? "#3b4f7a" : "#253a66";
+          ctx.lineWidth = s % 5 === 0 ? 1.5 : 1;
+          ctx.beginPath();
+          ctx.moveTo(L.trackX, y);
+          ctx.lineTo(L.trackX + L.trackW, y);
+          ctx.stroke();
+          ctx.fillStyle = "#8aa2d2";
+          ctx.font = "12px system-ui";
+          // 刻度文字放在轨道左侧
+          ctx.fillText(fmtSec(s), 12, y + 4);
+        }
+
+        // 播放/编辑视图的时间范围
+        const baseTime = state.isPlaying ? state.playHead : state.scroll;
+        const visStart = baseTime;
+        const visEnd = baseTime + vs;
+
+        // 打点标记线（横向整条线）
+        if (state.markers && state.markers.length > 0) {
+          ctx.save();
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 4]);
+          ctx.strokeStyle = "#f8c967";
+          for (const m of state.markers) {
+            if (m.time < visStart - 0.1 || m.time > visEnd + 0.1) continue;
+            const y = L.trackY + L.trackH - (m.time - baseTime) * state.pps;
+            ctx.beginPath();
+            ctx.moveTo(L.trackX, y);
+            ctx.lineTo(L.trackX + L.trackW, y);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        // 绘制音符
+        // 当正在播放时，以播放头为基准，让方块从上往下落（playHead 增大时，方块的 y 值增大）；
+        // 未播放时，以滚动条的 scroll 作为基准，方块位置固定在时间轴上。
+        for (const n of state.spawns) {
+          // 仅渲染在可视范围内的音符
+          if (n.time < visStart - 0.1 || n.time > visEnd + 0.1) continue;
+          // 计算 y 坐标：y = 底部位置 - (音符时间 - 基准时间) * pps
+          const y = L.trackY + L.trackH - (n.time - baseTime) * state.pps;
+          const x = L.trackX + n.lane * (L.laneW + LANE_GAP) + L.laneW / 2 - NOTE_SIZE / 2;
+          ctx.fillStyle = TYPE_COLORS[n.type] || "#ccc";
+          ctx.shadowColor = ctx.fillStyle;
+          ctx.shadowBlur = 10;
+          ctx.fillRect(x, y - NOTE_SIZE / 2, NOTE_SIZE, NOTE_SIZE);
+          ctx.shadowBlur = 0;
+        }
+
+        // 播放扫描线固定在底部
+        if (state.isPlaying) {
+          const y = L.trackY + L.trackH;
+          ctx.strokeStyle = "#ffed67";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(L.trackX, y);
+          ctx.lineTo(L.trackX + L.trackW, y);
+          ctx.stroke();
+        }
+
+        // 更新滚动条与提示
+        const ms = maxScroll();
+        const ratio = ms > 0 ? state.scroll / ms : 0;
+        scrollBar.value = String(Math.round(ratio * 1000));
+        zoomVal.textContent = Math.round(state.pps) + " px/s";
+        hint.textContent = `文件：${state.fileName}（时长 ${state.duration}s，音符 ${state.spawns.length}）`;
+      }
+
+// 命中测试
+      function hitTest(mx, my) {
+        if (my < L.trackY || my > L.trackY + L.trackH) return null;
+        if (mx < L.trackX || mx > L.trackX + L.trackW) return null;
+        const lane = Math.floor((mx - L.trackX) / (L.laneW + LANE_GAP));
+        // 根据反向坐标将 y 映射为时间：底部为 state.scroll
+        const t = state.scroll + (L.trackY + L.trackH - my) / state.pps;
+        // 容忍时间偏差（以视觉高度换算）
+        const tol = NOTE_SIZE / state.pps * 0.8;
+        for (let i = state.spawns.length - 1; i >= 0; i--) {
+          const n = state.spawns[i];
+          if (n.lane !== lane) continue;
+          if (Math.abs(n.time - t) <= tol) return { index: i, note: n };
+        }
+        return null;
+      }
+      // 绑定事件
+      cvs.addEventListener("pointerdown", (e) => {
+        const rect = cvs.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const hit = hitTest(mx, my);
+        // 删除模式：点击音符删除
+        if (state.deleteMode && hit) {
+          state.spawns.splice(hit.index, 1);
+          draw();
+          return;
+        }
+        // 如果正在播放且点击空白区域，则跳转播放位置
+        if (state.isPlaying && !state.deleteMode && !hit) {
+          if (
+            my >= L.trackY && my <= L.trackY + L.trackH &&
+            mx >= L.trackX && mx <= L.trackX + L.trackW
+          ) {
+            const newTime = clamp(state.scroll + (L.trackY + L.trackH - my) / state.pps, 0, state.duration);
+            state.playHead = newTime;
+            if (state.audio) {
+              state.audio.currentTime = newTime;
+            }
+            draw();
+            return;
+          }
+        }
+        // 命中音符：开始拖动
+        if (hit && !state.deleteMode) {
+          dragIndex = hit.index;
+        } else {
+        // 添加新音符
+        if (
+          my >= L.trackY &&
+          my <= L.trackY + L.trackH &&
+          mx >= L.trackX &&
+          mx <= L.trackX + L.trackW
+        ) {
+          const lane = clamp(
+            Math.floor((mx - L.trackX) / (L.laneW + LANE_GAP)),
+            0,
+            LANES - 1
+          );
+          // 反向映射时间：底部为 state.scroll
+          const t = clamp(
+            state.scroll + (L.trackY + L.trackH - my) / state.pps,
+            0,
+            state.duration
+          );
+          state.spawns.push({ time: Number(t.toFixed(3)), lane, type: state.activeType });
+          state.spawns.sort((a, b) => a.time - b.time);
+          draw();
+        }
+        }
+      });
+      cvs.addEventListener("pointermove", (e) => {
+        if (dragIndex === null) return;
+        const rect = cvs.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const lane = clamp(
+          Math.floor((mx - L.trackX) / (L.laneW + LANE_GAP)),
+          0,
+          LANES - 1
+        );
+        // 反向映射时间：拖动时 y 越大时间越小
+        const t = clamp(
+          state.scroll + (L.trackY + L.trackH - my) / state.pps,
+          0,
+          state.duration
+        );
+        const note = state.spawns[dragIndex];
+        note.lane = lane;
+        note.time = Number(t.toFixed(3));
+        draw();
+      });
+      function endDrag() {
+        if (dragIndex !== null) {
+          state.spawns.sort((a, b) => a.time - b.time);
+        }
+        dragIndex = null;
+      }
+      cvs.addEventListener("pointerup", endDrag);
+      cvs.addEventListener("pointercancel", endDrag);
+      // 按钮事件
+      chips.forEach((el, idx) => {
+        el.addEventListener("click", () => {
+          state.activeType = idx;
+          refreshChips();
+        });
+      });
+      refreshChips();
+      delBtn.addEventListener("click", () => {
+        state.deleteMode = !state.deleteMode;
+        delBtn.textContent = "删除模式" + (state.deleteMode ? "开" : "关");
+        draw();
+      });
+      fileInput.addEventListener("change", (ev) => {
+        const f = ev.target.files?.[0];
+        if (!f) return;
+        state.fileName = f.name.replace(/\s+/g, "_");
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const obj = parseSongCode(String(reader.result));
+            state.title = obj.title;
+            state.file = obj.file;
+            state.duration = obj.duration;
+            state.spawns = obj.spawns;
+            state.scroll = 0;
+            state.playHead = 0;
+            state.isPlaying = false;
+            titleEl.textContent = state.title;
+            playBtn.textContent = "测试";
+            draw();
+          } catch (err) {
+            alert("解析失败：" + err.message);
+          }
+        };
+        reader.readAsText(f);
+      });
+      // 导入音频文件
+      const audioInput = document.getElementById("audioFile");
+      audioInput.addEventListener("change", (ev) => {
+        const file = ev.target.files?.[0];
+        if (!file) return;
+        const url = URL.createObjectURL(file);
+        const audio = new Audio();
+        audio.src = url;
+        audio.preload = "auto";
+        audio.onloadedmetadata = () => {
+          // 更新谱面总时长为音频实际时长（向上取整）
+          if (audio.duration && !isNaN(audio.duration)) {
+            state.duration = Math.ceil(audio.duration);
+          }
+          draw();
+        };
+        state.audio = audio;
+        // 更新提示文本，显示已加载的音频文件名
+        hint.textContent = `文件：${state.fileName} / 音频：${file.name}（时长 ${state.duration}s，音符 ${state.spawns.length}）`;
+      });
+
+      // 导入时间参考底图
+      if (bgFileInput) {
+        bgFileInput.addEventListener("change", (ev) => {
+          const file = ev.target.files?.[0];
+          if (!file) return;
+          const url = URL.createObjectURL(file);
+          const img = new Image();
+          img.onload = () => {
+            state.bgImage = img;
+            draw();
+          };
+          img.onerror = () => {
+            alert("加载底图失败，请检查图片文件。");
+          };
+          img.src = url;
+        });
+      }
+
+      saveBtn.addEventListener("click", () => {
+        const js = stringifySongToJs({
+          title: state.title,
+          file: state.file,
+          duration: state.duration,
+          spawns: state.spawns,
+        });
+        const name = state.fileName.endsWith(".js") ? state.fileName : "song.js";
+        downloadText(name, js);
+      });
+      clearBtn.addEventListener("click", () => {
+        state.spawns = [];
+        state.scroll = 0;
+        draw();
+      });
+
+      // 打点按钮：在当前时间打点
+      if (markBtn) {
+        markBtn.addEventListener("click", () => {
+          const t = (state.audio && !isNaN(state.audio.currentTime))
+            ? state.audio.currentTime
+            : (state.isPlaying ? state.playHead : state.scroll);
+          addMarker(t);
+        });
+      }
+
+      // 清空打点
+      if (clearMarksBtn) {
+        clearMarksBtn.addEventListener("click", () => {
+          if (!state.markers.length) return;
+          if (!confirm("确认清空所有打点？")) return;
+          state.markers = [];
+          updateMarkerList();
+          draw();
+        });
+      }
+
+      // 播放循环：首帧防跳帧，并保持音频与时间轴同步
+      function loop(ts) {
+        // 首帧仅记录时间，防止 dt 过大导致播放头跳跃
+        if (!lastTS) {
+          lastTS = ts;
+          raf = requestAnimationFrame(loop);
+          return;
+        }
+        const dt = (ts - lastTS) / 1000;
+        lastTS = ts;
+        // 如果有音频，优先用音频播放位置驱动 playHead
+        if (state.audio && !isNaN(state.audio.currentTime)) {
+          state.playHead = state.audio.currentTime;
+        } else {
+          state.playHead += dt;
+        }
+        // 循环回到起点
+        if (state.playHead > state.duration) {
+          state.playHead = 0;
+          if (state.audio) {
+            try {
+              state.audio.currentTime = 0;
+            } catch (e) {}
+          }
+        }
+        // 如果有音频，轻量纠偏音频与 playHead 的差异
+        if (state.audio && !isNaN(state.audio.currentTime)) {
+          const drift = Math.abs(state.audio.currentTime - state.playHead);
+          if (drift > 0.08) state.playHead = state.audio.currentTime;
+        }
+        // 自动滚动以跟随播放头（反向坐标：底部为 scroll）
+        const vs = viewSeconds();
+        // 若播放头距底部大于可视范围减 0.5s，则上移窗口
+        if (state.playHead - state.scroll > vs - 0.5) {
+          state.scroll = clamp(state.playHead - (vs - 0.5), 0, maxScroll());
+        }
+        // 若播放头距底部小于 0.5s，则下移窗口
+        if (state.playHead - state.scroll < 0.5) {
+          state.scroll = clamp(state.playHead - 0.5, 0, maxScroll());
+        }
+        draw();
+        raf = requestAnimationFrame(loop);
+      }
+      // 播放/停止按钮
+      playBtn.addEventListener("click", () => {
+        if (state.isPlaying) {
+          // 停止播放
+          state.isPlaying = false;
+          cancelAnimationFrame(raf);
+          if (state.audio) {
+            try { state.audio.pause(); } catch (e) {}
+          }
+          playBtn.textContent = "测试";
+          draw();
+          return;
+        }
+        // 开始播放：从头开始
+        state.playHead = 0;
+        state.scroll = 0;
+        lastTS = 0;
+        if (state.audio) {
+          try {
+            state.audio.pause();
+            state.audio.currentTime = 0;
+            state.audio.play();
+            state.audio.onended = () => {
+              state.isPlaying = false;
+              cancelAnimationFrame(raf);
+              playBtn.textContent = "测试";
+              draw();
+            };
+          } catch (e) {}
+        }
+        state.isPlaying = true;
+        playBtn.textContent = "停止";
+        raf = requestAnimationFrame(loop);
+      });
+
+      // 重置按钮：立即停止播放并将进度归零
+      const resetBtnEl = document.getElementById("resetBtn");
+      resetBtnEl.addEventListener("click", () => {
+        // 如果正在播放，停止动画和音频
+        if (state.isPlaying) {
+          state.isPlaying = false;
+          cancelAnimationFrame(raf);
+        }
+        if (state.audio) {
+          try {
+            state.audio.pause();
+            state.audio.currentTime = 0;
+          } catch (e) {}
+        }
+        // 重置播放位置和滚动位置
+        state.playHead = 0;
+        state.scroll = 0;
+        // 重置首帧时间戳，以避免跳帧
+        lastTS = 0;
+        // 更新按钮文本
+        playBtn.textContent = "测试";
+        // 重新绘制界面
+        draw();
+      });
+
+      // 键盘快捷键
+      window.addEventListener("keydown", (ev) => {
+        const tag = (ev.target && ev.target.tagName) ? ev.target.tagName.toLowerCase() : "";
+        if (tag === "input" || tag === "textarea") return;
+
+        const key = ev.key.toLowerCase();
+
+        // R：重置
+        if (key === "r") {
+          ev.preventDefault();
+          resetBtnEl.click();
+          return;
+        }
+
+        // 空格：未播放时开始测试；播放时打点
+        if (key === " " || ev.code === "Space") {
+          ev.preventDefault();
+          if (!state.isPlaying && !(state.audio && !state.audio.paused && state.audio.currentTime > 0)) {
+            // 还没开始播放 → 触发测试播放（从 0 开始）
+            playBtn.click();
+          } else {
+            // 正在播放 → 当前时间打点
+            const t = (state.audio && !isNaN(state.audio.currentTime))
+              ? state.audio.currentTime
+              : state.playHead;
+            addMarker(t);
+          }
+          return;
+        }
+
+        // M：当前时间打点（不论是否播放）
+        if (key === "m") {
+          ev.preventDefault();
+          const t = (state.audio && !isNaN(state.audio.currentTime) && !state.audio.paused)
+            ? state.audio.currentTime
+            : (state.isPlaying ? state.playHead : state.scroll);
+          addMarker(t);
+          return;
+        }
+
+        // 1 / 2 / 3：切换音符类型
+        if (key === "1" || key === "2" || key === "3") {
+          ev.preventDefault();
+          const idx = Number(key) - 1;
+          if (idx >= 0 && idx < chips.length) {
+            state.activeType = idx;
+            refreshChips();
+            draw();
+          }
+          return;
+        }
+
+        // D：切换删除模式
+        if (key === "d") {
+          ev.preventDefault();
+          delBtn.click();
+          return;
+        }
+
+        // Z / X：缩放时间轴
+        if (key === "z") {
+          ev.preventDefault();
+          zoomOutBtn.click();
+          return;
+        }
+        if (key === "x") {
+          ev.preventDefault();
+          zoomInBtn.click();
+          return;
+        }
+
+        // 上 / 下方向键：轨道滚动
+        if (ev.key === "ArrowUp" || ev.key === "ArrowDown") {
+          ev.preventDefault();
+          const step = viewSeconds() * 0.25;
+          if (ev.key === "ArrowUp") {
+            state.scroll = clamp(state.scroll - step, 0, maxScroll());
+          } else {
+            state.scroll = clamp(state.scroll + step, 0, maxScroll());
+          }
+          draw();
+          return;
+        }
+
+        // 左 / 右方向键：在未播放时小步移动播放头
+        if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") {
+          if (state.isPlaying || (state.audio && !state.audio.paused)) return;
+          ev.preventDefault();
+          const step = 0.5;
+          const dir = ev.key === "ArrowLeft" ? -1 : 1;
+          const t = clamp(state.playHead + dir * step, 0, state.duration);
+          state.playHead = t;
+          state.scroll = clamp(t - viewSeconds() + 0.5, 0, maxScroll());
+          if (state.audio && !isNaN(state.audio.currentTime)) {
+            try { state.audio.currentTime = t; } catch (e) {}
+          }
+          draw();
+          return;
+        }
+
+        // Ctrl/Cmd + S：保存谱面
+        if (key === "s" && (ev.ctrlKey || ev.metaKey)) {
+          ev.preventDefault();
+          saveBtn.click();
+          return;
+        }
+      });
+      // 缩放
+      zoomInBtn.addEventListener("click", () => {
+        state.pps = clamp(state.pps + 10, 30, 200);
+        draw();
+      });
+      zoomOutBtn.addEventListener("click", () => {
+        state.pps = clamp(state.pps - 10, 30, 200);
+        draw();
+      });
+      // 滚动条
+      scrollBar.addEventListener("input", (e) => {
+        const ratio = Number(e.target.value) / 1000;
+        state.scroll = ratio * maxScroll();
+        draw();
+      });
+      // 自适应
+      window.addEventListener("resize", draw);
+      updateMarkerList();
+      draw();
+    })();
+  </script>
+</body>
+</html>
